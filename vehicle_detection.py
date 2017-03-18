@@ -21,11 +21,6 @@ X_scaler = dist_pickle["scaler"]
 orient = dist_pickle["orient"]
 pix_per_cell = dist_pickle["pix_per_cell"]
 cell_per_block = dist_pickle["cell_per_block"]
-#spatial_size = dist_pickle["spatial_size"]
-#hist_bins = dist_pickle["hist_bins"]
-
-#img = mpimg.imread('./test_images/test1.jpg')
-
 
 
 def convert_color(img, conv='RGB2YCrCb'):
@@ -94,24 +89,14 @@ def find_boxes(img, ystart, ystop, scale, svc, X_scaler, orient, pix_per_cell, c
             xleft = xpos*pix_per_cell
             ytop = ypos*pix_per_cell
 
-            # Extract the image patch
-            #subimg = cv2.resize(ctrans_tosearch[ytop:ytop+window, xleft:xleft+window], (64,64))
-          
-            # Get color features
-            ####spatial_features = bin_spatial(subimg, size=spatial_size)
-            ####hist_features = color_hist(subimg, nbins=hist_bins)
-
             # Scale features and make a prediction
-            ####test_features = X_scaler.transform(np.hstack((spatial_features, hist_features, hog_features)).reshape(1, -1))    
             test_features = X_scaler.transform(np.hstack((hog_features)).reshape(1, -1))    
-            #test_features = X_scaler.transform(np.hstack((shape_feat, hist_feat)).reshape(1, -1))    
             test_prediction = svc.predict(test_features)
             
             if test_prediction == 1:
                 xbox_left = np.int(xleft*scale)
                 ytop_draw = np.int(ytop*scale)
                 win_draw = np.int(window*scale)
-                #cv2.rectangle(draw_img,(xbox_left, ytop_draw+ystart),(xbox_left+win_draw,ytop_draw+win_draw+ystart),(0,0,255),6) 
                 box = (xbox_left, ytop_draw+ystart), (xbox_left+win_draw, ytop_draw+win_draw+ystart)
                 boxes.append(box)
     print("Test against test features. Scale:", scale, time.time()-start)
@@ -134,22 +119,6 @@ def apply_threshold(heatmap, threshold):
     # Return thresholded map
     return heatmap
 
-"""
-def draw_labeled_bboxes(img, labels):
-    # Iterate through all detected cars
-    for car_number in range(1, labels[1]+1):
-        # Find pixels with each car_number label value
-        nonzero = (labels[0] == car_number).nonzero()
-        # Identify x and y values of those pixels
-        nonzeroy = np.array(nonzero[0])
-        nonzerox = np.array(nonzero[1])
-        # Define a bounding box based on min/max x and y
-        bbox = ((np.min(nonzerox), np.min(nonzeroy)), (np.max(nonzerox), np.max(nonzeroy)))
-        # Draw the box on the image
-        cv2.rectangle(img, bbox[0], bbox[1], (0,0,255), 6)
-    # Return the image
-    return img
-"""
 def calculate_labeled_bboxes(labels):
     labeled_bboxes = []
     for car_number in range(1, labels[1]+1):
@@ -194,6 +163,8 @@ def process_image(image):
     
     for scale in [1.5, 2, 3, 4, 8]:
         boxes.extend(find_boxes(image, ystart, ystop, scale, svc, X_scaler, orient, pix_per_cell, cell_per_block, spatial_size, hist_bins))
+
+    print("o>>", boxes)
     heat = np.zeros_like(image[:,:,0]).astype(np.float)
     heat = add_heat(heat,boxes)
     
@@ -212,9 +183,9 @@ def process_image(image):
 
 if True:
     from moviepy.editor import VideoFileClip
-    clip1 = VideoFileClip("test_video.mp4")
+    clip1 = VideoFileClip("project_video.mp4")
     output_video = clip1.fl_image(process_image)
-    output_video.write_videofile("test_video_output.mp4", audio=False)
+    output_video.write_videofile("project_video_output.mp4", audio=False)
 else:
     img = mpimg.imread('./test_images/test1.jpg')
     plt.imshow(process_image(img))

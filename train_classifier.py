@@ -101,53 +101,6 @@ def get_hog_features(img, orient, pix_per_cell, cell_per_block, vis=False, featu
                        visualise=False, feature_vector=feature_vec)
         return features
 
-"""
-# Generate a random index to look at a car image
-ind = np.random.randint(0, len(cars))
-# Read in the image
-image = mpimg.imread(cars[ind])
-gray = cv2.cvtColor(image, cv2.COLOR_RGB2GRAY)
-# Define HOG parameters
-orient = 9
-pix_per_cell = 8
-cell_per_block = 2
-# Call our function with vis=True to see an image output
-features, hog_image = get_hog_features(gray, orient, 
-                        pix_per_cell, cell_per_block, 
-                        vis=True, feature_vec=False)
-
-
-# Plot the examples
-fig = plt.figure()
-plt.subplot(121)
-plt.imshow(image, cmap='gray')
-mpimg.imsave("./output_images/hog_car.jpg", image)
-plt.title('Example Car Image')
-plt.subplot(122)
-plt.imshow(hog_image, cmap='gray')
-mpimg.imsave("./output_images/hog_car_vis.jpg", hog_image)
-plt.title('HOG Visualization')
-"""
-
-#from sklearn.cross_validation import train_test_split
-
-# 
-"""Define a function to return HOG features and visualization
-def get_hog_features(img, orient, pix_per_cell, cell_per_block, 
-                        vis=False, feature_vec=True):
-    # Call with two outputs if vis==True
-    if vis == True:
-        features, hog_image = hog(img, orientations=orient, pixels_per_cell=(pix_per_cell, pix_per_cell),
-                                  cells_per_block=(cell_per_block, cell_per_block), transform_sqrt=True, 
-                                  visualise=vis, feature_vector=feature_vec)
-        return features, hog_image
-    # Otherwise call with one output
-    else:      
-        features = hog(img, orientations=orient, pixels_per_cell=(pix_per_cell, pix_per_cell),
-                       cells_per_block=(cell_per_block, cell_per_block), transform_sqrt=True, 
-                       visualise=vis, feature_vector=feature_vec)
-        return features
-"""
 # Define a function to extract features from a list of images
 # Have this function call bin_spatial() and color_hist()
 def extract_features(imgs, cspace='RGB', orient=9, 

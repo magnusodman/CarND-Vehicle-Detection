@@ -1,5 +1,6 @@
 import numpy as np
 from detections import bbox_detections
+from detections import big_bbox_detections
 
 import math
 def distance(center1, center2):
@@ -75,10 +76,10 @@ class CarTracker2:
             
         self.detected_cars = tracked_cars
 
-car_tracker2 = CarTracker2()
-
-for bboxes in bbox_detections:
-    car_tracker2.track_boxes(bboxes)
-    print("Detected cars: ", len(car_tracker2.detected_cars))
+if __name__ == "__main__":
+    car_tracker2 = CarTracker2()
+    for bboxes in big_bbox_detections:
+        car_tracker2.track_boxes(bboxes)
+        print("Detected cars: ", len(car_tracker2.detected_cars))
 
 
