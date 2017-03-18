@@ -22,6 +22,7 @@ class DetectedCar:
     def _center(self):
         return np.mean([center(bbox)[0] for bbox in self.bboxes]), np.mean([center(bbox)[1] for bbox in self.bboxes])
 
+    
     def track(self, bbox):
         self.bboxes.append(bbox)
 
@@ -29,10 +30,19 @@ class DetectedCar:
         self.bboxes.pop(0)
 
     def carBbox(self):
-        return self.bboxes[-1]
+        p0_0 = int(np.mean([box[0][0] for box in self.bboxes]))
+        p0_1 = int(np.mean([box[0][1] for box in self.bboxes]))
+        p1_0 = int(np.mean([box[1][0] for box in self.bboxes]))
+        p1_1 = int(np.mean([box[1][1] for box in self.bboxes]))
+
+        return (p0_0, p0_1), (p1_0, p1_1)
+        #return self.bboxes[-1]
 
     def tracked(self):
         return len(self.bboxes) > 0
+    
+    def isDisplayable(self):
+        return len(self.bboxes) > 2
 
 class CarTracker2:
     def __init__(self):

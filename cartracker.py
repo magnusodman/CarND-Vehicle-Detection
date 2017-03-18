@@ -3,7 +3,7 @@ import numpy as np
 from scipy.ndimage.measurements import label
 import cv2
 
-class CarTracker:
+class CarTrackerAPA:
     track_history = []
     def track(self, bboxes):
         self.track_history.append(bboxes)
@@ -70,13 +70,14 @@ def draw_bboxes(img, bboxes, color = (0, 0, 255)):
         
     return img
 
-car_tracker = CarTracker()
+from scratch import CarTracker2
+car_tracker = CarTracker2()
 def process_image(image):
     boxes = detections.next()
     bboxes  = calculate_labeled_bboxes(boxes, size=(image.shape[0], image.shape[1]))
     draw_img = draw_bboxes(np.copy(image),bboxes)
-    car_tracker.track(bboxes)
-    car_boxes = car_tracker.trackedCars()
+    car_tracker.track_boxes(bboxes)
+    car_boxes = [car.carBbox() for car in car_tracker.detected_cars if car.isDisplayable()]
     draw_img = draw_bboxes(draw_img, car_boxes, color = (255, 0, 0))
     return draw_img
 
