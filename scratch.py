@@ -34,37 +34,41 @@ class DetectedCar:
     def tracked(self):
         return len(self.bboxes) > 0
 
+class CarTracker2:
+    def __init__(self):
+        self.detected_cars = []
 
-def track_boxes(boxes, detected_cars):
-    
-    #Add trackings to existing cars
-    non_tracked_boxes = []
-    tracked_cars_in_image = set()
-    for bbox in boxes:
-        tracking_cars_for_box = [car for car in detected_cars if car.tracks(bbox)]
-        tracked_cars_in_image = tracked_cars_in_image.union(tracking_cars_for_box)
-        if len(tracking_cars_for_box) == 0:
-            non_tracked_boxes.append(bbox)
-        else:
-            tracking_cars_for_box[0].track(bbox)
-    
-    [detected_car.notrack() for detected_car in detected_cars if detected_car not in tracked_cars_in_image]
-    
-    #Remove untracked cars
-    tracked_cars = []
-    for detected_car in detected_cars:
-        if detected_car.tracked():
-            tracked_cars.append(detected_car)
-
-    #Add cars for untracked boxes
-    for non_tracked_box in non_tracked_boxes:
-        tracked_cars.append(DetectedCar(non_tracked_box))
+    def track_boxes(self, boxes):
         
-    return tracked_cars
+        #Add trackings to existing cars
+        non_tracked_boxes = []
+        tracked_cars_in_image = set()
+        for bbox in boxes:
+            tracking_cars_for_box = [car for car in self.detected_cars if car.tracks(bbox)]
+            tracked_cars_in_image = tracked_cars_in_image.union(tracking_cars_for_box)
+            if len(tracking_cars_for_box) == 0:
+                non_tracked_boxes.append(bbox)
+            else:
+                tracking_cars_for_box[0].track(bbox)
+        
+        [detected_car.notrack() for detected_car in self.detected_cars if detected_car not in tracked_cars_in_image]
+        
+        #Remove untracked cars
+        tracked_cars = []
+        for detected_car in self.detected_cars:
+            if detected_car.tracked():
+                tracked_cars.append(detected_car)
 
-detected_cars = []
+        #Add cars for untracked boxes
+        for non_tracked_box in non_tracked_boxes:
+            tracked_cars.append(DetectedCar(non_tracked_box))
+            
+        self.detected_cars = tracked_cars
+
+car_tracker2 = CarTracker2()
+
 for bboxes in bbox_detections:
-    detected_cars = track_boxes(bboxes, detected_cars)
-    print("Detected cars: ", len(detected_cars))
+    car_tracker2.track_boxes(bboxes)
+    print("Detected cars: ", len(car_tracker2.detected_cars))
 
 
