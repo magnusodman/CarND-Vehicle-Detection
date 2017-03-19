@@ -14,6 +14,11 @@ from scipy.ndimage.measurements import label
 import numpy as np
 import cv2
 from skimage.feature import hog
+import multiprocessing
+from defs import multi_window_search
+
+core_count = multiprocessing.cpu_count()
+pool = multiprocessing.Pool(processes=core_count)
 
 dist_pickle = pickle.load(open("svc_pickle.p", "rb"))
 svc = dist_pickle["svc"]
@@ -33,7 +38,7 @@ def convert_color(img, conv='RGB2YCrCb'):
 
 
 
-def find_boxes(img, ystart, ystop, scale, svc, X_scaler, orient, pix_per_cell, cell_per_block):
+def find_boxes(img, ystart, ystop, scale, svc, X_scaler, orient, pix_per_cell, cell_per_block, parallell=True):
     import time
     #print("Calculating boxes. scale:", scale)
     start = time.time()
@@ -70,30 +75,18 @@ def find_boxes(img, ystart, ystop, scale, svc, X_scaler, orient, pix_per_cell, c
     #print("HOG whole image. Scale:", scale, time.time()-start)
     start = time.time()
     boxes = []
+    
     for xb in range(nxsteps):
+        args = []
         for yb in range(nysteps):
-            ypos = yb*cells_per_step
-            xpos = xb*cells_per_step
-            # Extract HOG for this patch
-            hog_feat1 = hog1[ypos:ypos+nblocks_per_window, xpos:xpos+nblocks_per_window].ravel() 
-            hog_feat2 = hog2[ypos:ypos+nblocks_per_window, xpos:xpos+nblocks_per_window].ravel() 
-            hog_feat3 = hog3[ypos:ypos+nblocks_per_window, xpos:xpos+nblocks_per_window].ravel() 
-            hog_features = np.hstack((hog_feat1, hog_feat2, hog_feat3))
-
-            xleft = xpos*pix_per_cell
-            ytop = ypos*pix_per_cell
-
-            # Scale features and make a prediction
-            test_features = X_scaler.transform(np.hstack((hog_features)).reshape(1, -1))    
-            test_prediction = svc.predict(test_features)
-            
-            if test_prediction == 1:
-                xbox_left = np.int(xleft*scale)
-                ytop_draw = np.int(ytop*scale)
-                win_draw = np.int(window*scale)
-                box = (xbox_left, ytop_draw+ystart), (xbox_left+win_draw, ytop_draw+win_draw+ystart)
-                boxes.append(box)
-    start = time.time()
+            args.append((xb, yb, ystart, ystop, pix_per_cell, cells_per_step, nblocks_per_window, window, scale, hog1, hog2, hog3))
+        if parallell :
+            results = pool.map(multi_window_search, args)
+        else:
+            results = map(multi_window_search, args)
+        results = [result for result in results if result != None]
+        boxes.extend(results)
+    
     return boxes
 
 def add_heat(heatmap, bbox_list):
@@ -134,12 +127,19 @@ def draw_labeled_bboxes(img, labels):
     # Return the image
     return img
 
+def add_analysis(img, heatmap):
+    heatmap = cv2.resize(heatmap, (int(heatmap.shape[1]/4), int(heatmap.shape[0]/4)))
+    heatmap = np.dstack((heatmap, heatmap, heatmap))*255
+    img[0:heatmap.shape[0], 0:heatmap.shape[1]] = heatmap
+    return img
+
 
 class HeatTracker:
     
     def __init__(self):
         self.boxes_list = []
         self.HEAT_FRAMES = 6
+        self.heatmap = None
     
     def addBoxes(self, boxes):
         self.boxes_list.append(boxes)
@@ -154,6 +154,9 @@ class HeatTracker:
         for boxes in self.boxes_list:
             all_boxes.extend(boxes)
         return all_boxes
+    
+    def setHeatMap(self,heatmap):
+        self.heatmap = heatmap
 
 heat_tracker = HeatTracker()
 
@@ -161,11 +164,18 @@ def process_image(image):
     boxes = []
     
     #Handle 1x. Only scan far away. Time consuming
-    
+    """
     ystart = 400
+    ystop = 450
+    scale = 0.5
+    boxes.extend(find_boxes(image, ystart, ystop, scale, svc, X_scaler, orient, pix_per_cell, cell_per_block))
+    """
+
+    ystart = 350
     ystop = 500
     scale = 1
     boxes.extend(find_boxes(image, ystart, ystop, scale, svc, X_scaler, orient, pix_per_cell, cell_per_block))
+   
 
     ystart = 400
     ystop = 656
@@ -177,7 +187,7 @@ def process_image(image):
     heat = add_heat(heat,heat_tracker.allBoxes())
     
     # Apply threshold to help remove false positives
-    heat = apply_threshold(heat,threshold_n * 2)
+    heat = apply_threshold(heat,min(5,threshold_n * 2))
 
     # Visualize the heatmap when displaying    
     heatmap = np.clip(heat, 0, 255)
@@ -187,16 +197,17 @@ def process_image(image):
 
     draw_img = draw_labeled_bboxes(np.copy(image), labels)
 
+    add_analysis(draw_img, heatmap)
     return draw_img
 
 if __name__ == "__main__":
     if True:
         from moviepy.editor import VideoFileClip
-        #clip1 = VideoFileClip("project_video.mp4")
-        clip1 = VideoFileClip("test_video.mp4")
+        clip1 = VideoFileClip("project_video.mp4")
+        #clip1 = VideoFileClip("test_video.mp4")
         output_video = clip1.fl_image(process_image)
-        #output_video.write_videofile("project_video_output.mp4", audio=False)
-        output_video.write_videofile("test_video_output.mp4", audio=False)
+        output_video.write_videofile("project_video_output.mp4", audio=False)
+        #output_video.write_videofile("test_video_output.mp4", audio=False)
     else:
         img = mpimg.imread('./test_images/test1.jpg')
         plt.imshow(process_image(img))

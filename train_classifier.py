@@ -13,8 +13,6 @@ import time
 from sklearn.svm import LinearSVC
 from sklearn.preprocessing import StandardScaler
 from skimage.feature import hog
-# NOTE: the next import is only valid for scikit-learn version <= 0.17
-# for scikit-learn >= 0.18 use:
 from sklearn.model_selection import train_test_split
 
 
@@ -148,6 +146,9 @@ if __name__ == "__main__":
     # Reduce the sample size because HOG features are slow to compute
     # The quiz evaluator times out after 13s of CPU time
     sample_size = min(len(cars), len(notcars))
+
+    from random import shuffle
+    shuffle(cars)
     cars = cars[0:sample_size]
     notcars = notcars[0:sample_size]
 
