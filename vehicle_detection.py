@@ -41,7 +41,7 @@ hist_bins = None
 
 def find_boxes(img, ystart, ystop, scale, svc, X_scaler, orient, pix_per_cell, cell_per_block, spatial_size, hist_bins):
     import time
-    print("Calculating boxes. scale:", scale)
+    #print("Calculating boxes. scale:", scale)
     start = time.time()
     img = img.astype(np.float32)/255
     
@@ -65,7 +65,7 @@ def find_boxes(img, ystart, ystop, scale, svc, X_scaler, orient, pix_per_cell, c
     cells_per_step = 2  # Instead of overlap, define how many cells to step
     nxsteps = (nxblocks - nblocks_per_window) // cells_per_step
     nysteps = (nyblocks - nblocks_per_window) // cells_per_step
-    print("Setup for calculation. Scale:", scale, time.time()-start)
+    #print("Setup for calculation. Scale:", scale, time.time()-start)
     start = time.time()
     # Compute individual channel HOG features for the entire image
     hogs = [get_hog_features(ch1, orient, pix_per_cell, cell_per_block, feature_vec=False), get_hog_features(ch2, orient, pix_per_cell, cell_per_block, feature_vec=False), get_hog_features(ch3, orient, pix_per_cell, cell_per_block, feature_vec=False)]
@@ -73,7 +73,7 @@ def find_boxes(img, ystart, ystop, scale, svc, X_scaler, orient, pix_per_cell, c
     hog1 = hogs[0] #get_hog_features(ch1, orient, pix_per_cell, cell_per_block, feature_vec=False)
     hog2 = hogs[1] #get_hog_features(ch2, orient, pix_per_cell, cell_per_block, feature_vec=False)
     hog3 = hogs[2] #get_hog_features(ch3, orient, pix_per_cell, cell_per_block, feature_vec=False)
-    print("HOG whole image. Scale:", scale, time.time()-start)
+    #print("HOG whole image. Scale:", scale, time.time()-start)
     start = time.time()
     boxes = []
     for xb in range(nxsteps):
@@ -99,7 +99,7 @@ def find_boxes(img, ystart, ystop, scale, svc, X_scaler, orient, pix_per_cell, c
                 win_draw = np.int(window*scale)
                 box = (xbox_left, ytop_draw+ystart), (xbox_left+win_draw, ytop_draw+win_draw+ystart)
                 boxes.append(box)
-    print("Test against test features. Scale:", scale, time.time()-start)
+    #print("Test against test features. Scale:", scale, time.time()-start)
     start = time.time()
     return boxes
 
@@ -154,6 +154,24 @@ class CarTracker:
 
 car_tracker = CarTracker()
 
+class HeatTracker:
+    def __init__(self):
+        self.boxes_list = []
+    
+    def addBoxes(self, boxes):
+        self.boxes_list.append(boxes)
+        if len(self.boxes_list) > 4:
+            self.boxes_list.pop(0)
+        return len(self.boxes_list)
+    
+    def allBoxes(self):
+        all_boxes = []
+        for boxes in self.boxes_list:
+            all_boxes.extend(boxes)
+        return all_boxes
+
+heat_tracker = HeatTracker()
+
 def process_image(image):
     import time
     start = time.time()
@@ -164,12 +182,12 @@ def process_image(image):
     for scale in [1.5, 2, 3, 4, 8]:
         boxes.extend(find_boxes(image, ystart, ystop, scale, svc, X_scaler, orient, pix_per_cell, cell_per_block, spatial_size, hist_bins))
 
-    print("o>>", boxes)
+    threshold_n = heat_tracker.addBoxes(boxes)
     heat = np.zeros_like(image[:,:,0]).astype(np.float)
-    heat = add_heat(heat,boxes)
+    heat = add_heat(heat,heat_tracker.allBoxes())
     
     # Apply threshold to help remove false positives
-    heat = apply_threshold(heat,2)
+    heat = apply_threshold(heat,threshold_n * 2)
 
     # Visualize the heatmap when displaying    
     heatmap = np.clip(heat, 0, 255)

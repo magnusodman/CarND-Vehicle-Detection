@@ -1,4 +1,5 @@
 from detections import box_detections
+from detections import big_bbox_detections
 import numpy as np
 from scipy.ndimage.measurements import label
 import cv2
@@ -87,4 +88,4 @@ if __name__ == "__main__":
     from moviepy.editor import VideoFileClip
     clip1 = VideoFileClip("test_video.mp4")
     output_video = clip1.fl_image(process_image)
-    output_video.write_videofile("test_video_output_detections.mp4", audio=False)
+    output_video.write_videofile("test_video_output.mp4", audio=False)
