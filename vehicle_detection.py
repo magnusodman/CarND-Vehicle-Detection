@@ -32,14 +32,8 @@ def convert_color(img, conv='RGB2YCrCb'):
         return cv2.cvtColor(img, cv2.COLOR_RGB2LUV)
 
 
-ystart = 400
-ystop = 656
-scale = 1.5
-    
-spatial_size = None
-hist_bins = None
 
-def find_boxes(img, ystart, ystop, scale, svc, X_scaler, orient, pix_per_cell, cell_per_block, spatial_size, hist_bins):
+def find_boxes(img, ystart, ystop, scale, svc, X_scaler, orient, pix_per_cell, cell_per_block):
     import time
     #print("Calculating boxes. scale:", scale)
     start = time.time()
@@ -99,7 +93,6 @@ def find_boxes(img, ystart, ystop, scale, svc, X_scaler, orient, pix_per_cell, c
                 win_draw = np.int(window*scale)
                 box = (xbox_left, ytop_draw+ystart), (xbox_left+win_draw, ytop_draw+win_draw+ystart)
                 boxes.append(box)
-    #print("Test against test features. Scale:", scale, time.time()-start)
     start = time.time()
     return boxes
 
@@ -136,33 +129,25 @@ def calculate_labeled_bboxes(labels):
 def draw_labeled_bboxes(img, labels):
     # Iterate through all detected cars
     for bbox in calculate_labeled_bboxes(labels):
-        cv2.rectangle(img, bbox[0], bbox[1], (0,0,255), 6)
+        cv2.rectangle(img, bbox[0], bbox[1], (0,0,255), 3)
         
     # Return the image
     return img
 
-print("Processing video")
-
-
-class CarTracker:
-    index = 0
-    labels = []
-
-    def next(self):
-        self.index = self.index + 1
-        return self.index - 1
-
-car_tracker = CarTracker()
 
 class HeatTracker:
+    
     def __init__(self):
         self.boxes_list = []
+        self.HEAT_FRAMES = 6
     
     def addBoxes(self, boxes):
         self.boxes_list.append(boxes)
-        if len(self.boxes_list) > 4:
+        if len(self.boxes_list) > self.HEAT_FRAMES:
             self.boxes_list.pop(0)
-        return len(self.boxes_list)
+        if len(self.boxes_list) > self.HEAT_FRAMES:
+            print("TO MANY HEAT FRAMES")
+        return max(len(self.boxes_list), self.HEAT_FRAMES)
     
     def allBoxes(self):
         all_boxes = []
@@ -172,15 +157,20 @@ class HeatTracker:
 
 heat_tracker = HeatTracker()
 
-def process_image(image):
-    import time
-    start = time.time()
-    
-        
+def process_image(image):        
     boxes = []
     
+    #Handle 1x. Only scan far away. Time consuming
+    
+    ystart = 400
+    ystop = 500
+    scale = 1
+    boxes.extend(find_boxes(image, ystart, ystop, scale, svc, X_scaler, orient, pix_per_cell, cell_per_block))
+
+    ystart = 400
+    ystop = 656
     for scale in [1.5, 2, 3, 4, 8]:
-        boxes.extend(find_boxes(image, ystart, ystop, scale, svc, X_scaler, orient, pix_per_cell, cell_per_block, spatial_size, hist_bins))
+        boxes.extend(find_boxes(image, ystart, ystop, scale, svc, X_scaler, orient, pix_per_cell, cell_per_block))
 
     threshold_n = heat_tracker.addBoxes(boxes)
     heat = np.zeros_like(image[:,:,0]).astype(np.float)
@@ -193,18 +183,21 @@ def process_image(image):
     heatmap = np.clip(heat, 0, 255)
 
     # Find final boxes from heatmap using label function
-    car_tracker.labels = label(heatmap)
+    labels = label(heatmap)
 
-    draw_img = draw_labeled_bboxes(np.copy(image), car_tracker.labels)
+    draw_img = draw_labeled_bboxes(np.copy(image), labels)
 
     return draw_img
 
-if True:
-    from moviepy.editor import VideoFileClip
-    clip1 = VideoFileClip("project_video.mp4")
-    output_video = clip1.fl_image(process_image)
-    output_video.write_videofile("project_video_output.mp4", audio=False)
-else:
-    img = mpimg.imread('./test_images/test1.jpg')
-    plt.imshow(process_image(img))
-    plt.show()
+if __name__ == "__main__":
+    if True:
+        from moviepy.editor import VideoFileClip
+        #clip1 = VideoFileClip("project_video.mp4")
+        clip1 = VideoFileClip("test_video.mp4")
+        output_video = clip1.fl_image(process_image)
+        #output_video.write_videofile("project_video_output.mp4", audio=False)
+        output_video.write_videofile("test_video_output.mp4", audio=False)
+    else:
+        img = mpimg.imread('./test_images/test1.jpg')
+        plt.imshow(process_image(img))
+        plt.show()
